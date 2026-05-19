@@ -5,13 +5,12 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBrUqfs30NEu2omqiasX8yRr1_6UJc62sU",
-  authDomain: "otoservis-saas.firebaseapp.com",
-  projectId: "otoservis-saas",
-  storageBucket: "otoservis-saas.firebasestorage.app",
-  messagingSenderId: "741569204068",
-  appId: "1:741569204068:web:3a87e529cca79896473471",
-  measurementId: "G-7GK4FL3RT6"
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID
 };
 
 // Next.js (Web) tarafında sayfa her yenilendiğinde Firebase'in baştan

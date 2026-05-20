@@ -22,9 +22,8 @@ export default function LoginScreen() {
     }
     
     try {
+      // Sadece login fonksiyonunu çağırıyoruz, yönlendirmeyi _layout yapacak!
       await login(email, password);
-      // Giriş başarılıysa usta paneline (dashboard) yönlendir
-      router.replace('/dashboard'); 
     } catch (error) {
       Alert.alert('Giriş Başarısız', 'Bilgilerinizi kontrol edip tekrar deneyin.');
     }

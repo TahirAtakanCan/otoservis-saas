@@ -23,6 +23,17 @@ export interface AppUser {
   createdAt: Date | any;
 }
 
+// Araç Sahibi (Müşteri) Modeli
+export interface Customer {
+  id: string;
+  tenantId: string; // Hangi otoservise ait olduğu
+  fullName: string; // Ad Soyad
+  phone: string;    // Telefon Numarası
+  email?: string;
+  address?: string;
+  createdAt?: Date | any;
+}
+
 // 3. Araç Modeli (SaaS Uyumlu)
 export interface Vehicle {
   id: string;
@@ -31,6 +42,7 @@ export interface Vehicle {
   brand: string; // Marka (Örn: Opel, Chevrolet)
   model: string; // Model
   year: number;
+  mileage?: number;
   customerId: string; // Araç sahibinin ID'si
   createdAt: Date | any;
 }
@@ -38,10 +50,31 @@ export interface Vehicle {
 // 4. İş Emri / Servis Kaydı Modeli
 export interface ServiceRecord {
   id: string;
-  tenantId: string; // Veri izolasyonu için zorunlu
+  tenantId: string;
   vehicleId: string;
+  description: string; // Müşteri Şikayeti / Arıza Notu
+  notes?: string;      // İç Not
+  currentMileage?: number;
+  technicianName?: string; // Teknisyen
   status: 'bekliyor' | 'islemde' | 'tamamlandi' | 'iptal';
-  description: string;
-  totalCost: number;
+  subtotal?: number;       // Ara Toplam
+  kdvIncluded?: boolean;   // KDV Dahil mi?
+  taxRate?: number;        // KDV Oranı
+  kdvAmount?: number;      // KDV Tutarı
+  totalCost: number;       // Genel Toplam
+  laborItems?: LaborItem[]; // İşçilik Kalemleri
+  usedParts?: {
+    partId: string;
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    isManual?: boolean; // Manuel eklenen parça mı? (Stoktan düşmemek için)
+  }[];
   createdAt: Date | any;
+}
+
+export interface LaborItem {
+  description: string;
+  price: number;
 }

@@ -3,13 +3,28 @@ import { collection, addDoc, getDocs, query, where, serverTimestamp, doc, update
 import { db } from './firebase';
 import { ServiceRecord } from '@repo/types';
 
-// Yeni İş Emri Oluşturma
+// Yeni İş Emri Oluşturma (Stok Düşme Entegrasyonlu)
 export const createServiceRecord = async (serviceData: Omit<ServiceRecord, 'id' | 'createdAt'>) => {
   try {
+    // 1. İş Emrini Oluştur
     const docRef = await addDoc(collection(db, 'services'), {
       ...serviceData,
       createdAt: serverTimestamp(),
     });
+
+    // 2. Eğer stoktan parça kullanıldıysa, stok miktarını düş
+    if (serviceData.usedParts && serviceData.usedParts.length > 0) {
+      for (const part of serviceData.usedParts) {
+        // isManual true değilse ve parça ID'si 'manual' değilse stoktan düş
+        if (!part.isManual && part.partId !== 'manual') {
+          const partRef = doc(db, 'inventory', part.partId);
+          await updateDoc(partRef, {
+            stockQuantity: increment(-part.quantity)
+          });
+        }
+      }
+    }
+
     return docRef.id;
   } catch (error) {
     console.error("İş emri açılırken hata oluştu:", error);
@@ -17,7 +32,6 @@ export const createServiceRecord = async (serviceData: Omit<ServiceRecord, 'id' 
   }
 };
 
-// Şirkete ait tüm İş Emirlerini Getirme
 export const getServiceRecordsByTenant = async (tenantId: string) => {
   try {
     const q = query(collection(db, 'services'), where('tenantId', '==', tenantId));
@@ -32,21 +46,16 @@ export const getServiceRecordsByTenant = async (tenantId: string) => {
   }
 };
 
-// İş Emrinin Durumunu Güncelleme (Bekliyor -> İşlemde -> Tamamlandı)
 export const updateServiceStatus = async (recordId: string, newStatus: ServiceRecord['status']) => {
   try {
     const docRef = doc(db, 'services', recordId);
-    await updateDoc(docRef, {
-      status: newStatus
-    });
+    await updateDoc(docRef, { status: newStatus });
   } catch (error) {
     console.error("Durum güncellenirken hata oluştu:", error);
     throw error;
   }
 };
 
-
-// İş emrini hem durum hem de maliyet olarak güncelleme
 export const updateServiceDetails = async (recordId: string, data: { status?: string, totalCost?: number }) => {
   try {
     const docRef = doc(db, 'services', recordId);
@@ -57,41 +66,31 @@ export const updateServiceDetails = async (recordId: string, data: { status?: st
   }
 };
 
-// İş Emrine Parça Ekleme ve Stok Düşme Fonksiyonu
 export const addPartToService = async (serviceId: string, partId: string, quantity: number) => {
   try {
-    // 1. Önce parçanın güncel fiyatını ve stok durumunu bul
     const partRef = doc(db, 'inventory', partId);
     const partSnap = await getDoc(partRef);
-    
     if (!partSnap.exists()) throw new Error("Parça bulunamadı!");
     
     const partData = partSnap.data();
-    if (partData.stockQuantity < quantity) {
-      throw new Error("Depoda yeterli stok yok!");
-    }
+    if (partData.stockQuantity < quantity) throw new Error("Depoda yeterli stok yok!");
 
-    // 2. İş emrine eklenecek tutarı hesapla
     const totalPartCost = partData.unitPrice * quantity;
 
-    // 3. Stoktan düş
-    await updateDoc(partRef, {
-      stockQuantity: increment(-quantity) // Stoğu eksi yönde artır (azalt)
-    });
+    await updateDoc(partRef, { stockQuantity: increment(-quantity) });
 
-    // 4. İş emrine parçayı ekle ve toplam faturayı kabart
     const serviceRef = doc(db, 'services', serviceId);
     await updateDoc(serviceRef, {
-      totalCost: increment(totalPartCost), // Toplam tutara ekle
-      usedParts: arrayUnion({             // Kullanılan parçalar listesine ekle
+      totalCost: increment(totalPartCost),
+      usedParts: arrayUnion({
         partId: partId,
         name: partData.name,
         quantity: quantity,
         unitPrice: partData.unitPrice,
-        totalPrice: totalPartCost
+        totalPrice: totalPartCost,
+        isManual: false
       })
     });
-
     return true;
   } catch (error) {
     console.error("Parça eklenirken hata:", error);

@@ -51,12 +51,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
         
         <nav style={{ flex: 1, padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <Link href="/dashboard" style={getLinkStyle('/dashboard')}>Ana Sayfa</Link>
-          <Link href="/dashboard/vehicles" style={getLinkStyle('/dashboard/vehicles')}>Araç Yönetimi</Link>
-          <Link href="/dashboard/services" style={getLinkStyle('/dashboard/services')}>İş Emirleri</Link>
-          <Link href="/dashboard/customers" style={getLinkStyle('/dashboard/customers')}>Müşteriler</Link>
+          <Link href="/dashboard" style={getLinkStyle('/dashboard')}>🏠 Ana Sayfa</Link>
+          <Link href="/dashboard/vehicles" style={getLinkStyle('/dashboard/vehicles')}>🚘 Araç Yönetimi</Link>
+          <Link href="/dashboard/services" style={getLinkStyle('/dashboard/services')}>🔧 İş Emirleri</Link>
+          <Link href="/dashboard/customers" style={getLinkStyle('/dashboard/customers')}>👥 Müşteriler</Link>
           <Link href="/dashboard/reports" style={getLinkStyle('/dashboard/reports')}>📊 Raporlar</Link>
+          <Link href="/dashboard/inventory" style={getLinkStyle('/dashboard/inventory')}>📦 Stok Yönetimi</Link>
           
+          {/* SADECE SUPER ADMIN'İN GÖRECEĞİ MENÜ */}
           {user.role === 'super_admin' && (
             <Link href="/dashboard/tenants" style={{ ...getLinkStyle('/dashboard/tenants'), color: '#fbbf24', marginTop: 'auto', border: '1px solid #fbbf24' }}>
               ⚙️ Şirketleri Yönet

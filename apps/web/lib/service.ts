@@ -44,3 +44,15 @@ export const updateServiceStatus = async (recordId: string, newStatus: ServiceRe
     throw error;
   }
 };
+
+
+// İş emrini hem durum hem de maliyet olarak güncelleme
+export const updateServiceDetails = async (recordId: string, data: { status?: string, totalCost?: number }) => {
+  try {
+    const docRef = doc(db, 'services', recordId);
+    await updateDoc(docRef, data);
+  } catch (error) {
+    console.error("Güncelleme hatası:", error);
+    throw error;
+  }
+};

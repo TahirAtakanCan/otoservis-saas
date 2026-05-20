@@ -2,16 +2,16 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation'; // <-- usePathname Eklendi
 import { useAuthStore } from '../../lib/store';
 import { logoutUser } from '../../lib/auth';
 import Link from 'next/link';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname(); // <-- Bulunduğumuz sayfanın URL'sini aldık
   const { user, isLoading } = useAuthStore();
 
-  // AUTH GUARD (Güvenlik Duvarı): Eğer kullanıcı giriş yapmamışsa login'e at
   useEffect(() => {
     if (!isLoading && !user) {
       router.push('/login');
@@ -23,10 +23,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.push('/login');
   };
 
-  // Veriler hafızadan gelene kadar veya kullanıcı yokken beyaz ekran göster
   if (isLoading || !user) {
     return <div style={{ display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center' }}>Yükleniyor...</div>;
   }
+
+  // Dinamik Link Tasarımı İçin Yardımcı Fonksiyon
+  const getLinkStyle = (path: string) => {
+    const isActive = pathname === path;
+    return {
+      color: isActive ? 'white' : '#d1d5db',
+      textDecoration: 'none',
+      padding: '0.75rem 1rem', // Biraz daha ferah padding
+      borderRadius: '6px',
+      backgroundColor: isActive ? '#374151' : 'transparent',
+      fontWeight: isActive ? 'bold' : 'normal' as 'bold' | 'normal',
+      display: 'block'
+    };
+  };
 
   return (
     <div style={{ display: 'flex', height: '100vh', backgroundColor: '#f3f4f6', fontFamily: 'sans-serif' }}>
@@ -38,14 +51,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
         
         <nav style={{ flex: 1, padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <Link href="/dashboard" style={{ color: 'white', textDecoration: 'none', padding: '0.5rem', borderRadius: '4px', backgroundColor: '#374151' }}>Ana Sayfa</Link>
-          <Link href="/dashboard/vehicles" style={{ color: '#d1d5db', textDecoration: 'none', padding: '0.5rem', borderRadius: '4px' }}>Araç Yönetimi</Link>
-          <Link href="/dashboard/services" style={{ color: '#d1d5db', textDecoration: 'none', padding: '0.5rem', borderRadius: '4px' }}>İş Emirleri</Link>
-          <Link href="/dashboard/customers" style={{ color: '#d1d5db', textDecoration: 'none', padding: '0.5rem', borderRadius: '4px' }}>Müşteriler</Link>
+          <Link href="/dashboard" style={getLinkStyle('/dashboard')}>Ana Sayfa</Link>
+          <Link href="/dashboard/vehicles" style={getLinkStyle('/dashboard/vehicles')}>Araç Yönetimi</Link>
+          <Link href="/dashboard/services" style={getLinkStyle('/dashboard/services')}>İş Emirleri</Link>
+          <Link href="/dashboard/customers" style={getLinkStyle('/dashboard/customers')}>Müşteriler</Link>
+          <Link href="/dashboard/reports" style={getLinkStyle('/dashboard/reports')}>📊 Raporlar</Link>
           
-          {/* SADECE SUPER ADMIN'İN GÖRECEĞİ MENÜ */}
           {user.role === 'super_admin' && (
-            <Link href="/dashboard/tenants" style={{ color: '#fbbf24', textDecoration: 'none', padding: '0.5rem', borderRadius: '4px', marginTop: 'auto', border: '1px solid #fbbf24' }}>
+            <Link href="/dashboard/tenants" style={{ ...getLinkStyle('/dashboard/tenants'), color: '#fbbf24', marginTop: 'auto', border: '1px solid #fbbf24' }}>
               ⚙️ Şirketleri Yönet
             </Link>
           )}

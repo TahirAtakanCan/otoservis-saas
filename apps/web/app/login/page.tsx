@@ -20,13 +20,9 @@ export default function LoginPage() {
     setError('');
     
     try {
-      const user = await login(email, password);
-      // Başarılı girişte role göre yönlendirme
-      if (user.role === 'super_admin') {
-        router.push('/dashboard'); 
-      } else {
-        router.push('/'); 
-      }
+      await login(email, password);
+      // Başarılı girişte role bakmaksızın herkesi dashboard'a alıyoruz
+      router.push('/dashboard'); 
     } catch (err: any) {
       setError('Giriş başarısız. Lütfen bilgilerinizi kontrol edin.');
     }

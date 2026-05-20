@@ -2,19 +2,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../../../lib/store';
 import { createServiceRecord, getServiceRecordsByTenant, updateServiceStatus, addPartToService } from '../../../lib/service';
 import { getVehiclesByTenant } from '../../../lib/vehicle';
 import { getInventoryByTenant, Part } from '../../../lib/inventory';
+import { getCustomersByTenant, Customer } from '../../../lib/customer'; // <-- Müşterileri import ettik
 import { ServiceRecord, Vehicle } from '@repo/types';
-import { useRouter } from 'next/navigation'; // <-- Bunu importların arasına ekle
 
 export default function ServicesPage() {
   const { user } = useAuthStore();
   const router = useRouter();
+  
   const [records, setRecords] = useState<ServiceRecord[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [inventory, setInventory] = useState<Part[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]); // <-- Müşteri State'i
   const [isLoading, setIsLoading] = useState(true);
 
   // Form State'leri
@@ -30,14 +33,17 @@ export default function ServicesPage() {
     if (!user?.tenantId) return;
     setIsLoading(true);
     try {
-      const [recordsData, vehiclesData, inventoryData] = await Promise.all([
+      // Müşterileri de Promise.all içine dahil ettik
+      const [recordsData, vehiclesData, inventoryData, customersData] = await Promise.all([
         getServiceRecordsByTenant(user.tenantId),
         getVehiclesByTenant(user.tenantId),
-        getInventoryByTenant(user.tenantId)
+        getInventoryByTenant(user.tenantId),
+        getCustomersByTenant(user.tenantId)
       ]);
       setRecords(recordsData.sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds));
       setVehicles(vehiclesData);
       setInventory(inventoryData);
+      setCustomers(customersData);
     } catch (error) {
       console.error(error);
     } finally {
@@ -71,6 +77,33 @@ export default function ServicesPage() {
   const handleStatusChange = async (recordId: string, newStatus: string) => {
     try {
       await updateServiceStatus(recordId, newStatus as any);
+      
+      // WHATSAPP ENTEGRASYONU (Sadece Tamamlandı seçilirse çalışır)
+      if (newStatus === 'tamamlandi') {
+        const record = records.find(r => r.id === recordId);
+        const vehicle = vehicles.find(v => v.id === record?.vehicleId);
+        const customer = customers.find(c => c.id === vehicle?.customerId);
+
+        if (customer && customer.phone) {
+          const wantToNotify = window.confirm('İşlem tamamlandı! Müşteriye WhatsApp üzerinden fatura bilgisini göndermek ister misiniz?');
+          
+          if (wantToNotify) {
+            // Telefon numarasını WhatsApp formatına uygun hale getir (Boşlukları sil, başına 90 ekle vb.)
+            let phone = customer.phone.replace(/\D/g, '');
+            if (phone.length === 10) phone = '90' + phone; // 532 ile başlıyorsa
+            else if (phone.startsWith('0')) phone = '90' + phone.substring(1); // 0532 ile başlıyorsa
+
+            // Gönderilecek Mesaj Taslağı
+            const message = `Merhaba ${customer.fullName},\n\n${vehicle?.plate} plakalı aracınızın servis işlemleri tamamlanmıştır. 🔧\n\n💰 Toplam Tutar: ₺${record?.totalCost?.toLocaleString() || 0}\n\nBizi tercih ettiğiniz için teşekkür ederiz. Kazasız sürüşler dileriz!`;
+            
+            // WhatsApp Web/App tetikleyici link
+            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+          }
+        } else {
+          alert('Bu araca ait kayıtlı bir müşteri telefonu bulunamadı.');
+        }
+      }
+
       fetchData();
     } catch (error) {
       alert('Durum güncellenemedi!');
@@ -86,7 +119,7 @@ export default function ServicesPage() {
       setSelectedPartId('');
       setPartQuantity('1');
       setActiveRecordId(null);
-      fetchData(); // Listeyi yenile ki güncel fiyat ve stok gelsin
+      fetchData();
     } catch (error: any) {
       alert(error.message || 'Parça eklenirken bir hata oluştu.');
     }
@@ -108,7 +141,6 @@ export default function ServicesPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem' }}>
         
-        {/* YENİ İŞ EMRİ FORMU */}
         <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', height: 'fit-content' }}>
           <h2 style={{ fontSize: '1.25rem', marginTop: 0, borderBottom: '1px solid #e5e7eb', paddingBottom: '0.5rem' }}>Yeni İş Emri Aç</h2>
           <form onSubmit={handleCreateRecord} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
@@ -121,7 +153,6 @@ export default function ServicesPage() {
           </form>
         </div>
 
-        {/* İŞ EMİRLERİ LİSTESİ */}
         <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
           <h2 style={{ fontSize: '1.25rem', marginTop: 0, borderBottom: '1px solid #e5e7eb', paddingBottom: '0.5rem' }}>Servis Kayıtları</h2>
           
@@ -130,13 +161,12 @@ export default function ServicesPage() {
               {records.map(record => {
                 const vehicle = vehicles.find(v => v.id === record.vehicleId);
                 const statusStyle = getStatusColor(record.status);
-                // @ts-ignore - usedParts sonradan eklendiği için tip hatası verebilir, yoksayıyoruz
+                // @ts-ignore
                 const usedParts = record.usedParts || [];
                 
                 return (
                   <div key={record.id} style={{ border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
                     
-                    {/* Üst Kısım: Plaka ve Durum */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
                       <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#111827' }}>
                         {vehicle?.plate} <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>({vehicle?.brand})</span>
@@ -151,7 +181,6 @@ export default function ServicesPage() {
                     <div style={{ padding: '1rem' }}>
                       <p style={{ margin: '0 0 1rem 0', color: '#4b5563', fontSize: '0.875rem' }}>{record.description}</p>
                       
-                      {/* KULLANILAN PARÇALAR LİSTESİ */}
                       {usedParts.length > 0 && (
                         <div style={{ marginBottom: '1rem', backgroundColor: '#f3f4f6', padding: '0.75rem', borderRadius: '6px' }}>
                           <strong style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#6b7280' }}>Kullanılan Parçalar:</strong>
@@ -163,18 +192,16 @@ export default function ServicesPage() {
                         </div>
                       )}
 
-                      {/* TOPLAM TUTAR VE PARÇA EKLEME BUTONU */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e5e7eb', paddingTop: '1rem' }}>
                         <div>
                           <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Toplam Tutar: </span>
                           <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#10b981' }}>₺{record.totalCost?.toLocaleString() || 0}</span>
                         </div>
-
-                        {/* YAZDIR BUTONU BURAYA EKLENECEK */}
+                        
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                           <button 
-                              onClick={() => router.push(`/dashboard/invoice/${record.id}`)} // <-- window.open yerine router.push yaptık
-                              style={{ padding: '0.5rem 1rem', backgroundColor: '#4b5563', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.875rem' }}
+                            onClick={() => router.push(`/dashboard/invoice/${record.id}`)}
+                            style={{ padding: '0.5rem 1rem', backgroundColor: '#4b5563', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.875rem' }}
                           >
                             🖨️ Formu Yazdır
                           </button>
@@ -190,7 +217,6 @@ export default function ServicesPage() {
                         </div>
                       </div>
 
-                      {/* PARÇA EKLEME AÇILIR PANELİ */}
                       {activeRecordId === record.id && (
                         <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#eff6ff', borderRadius: '6px', display: 'flex', gap: '0.5rem' }}>
                           <select value={selectedPartId} onChange={(e) => setSelectedPartId(e.target.value)} style={{ flex: 2, padding: '0.5rem', borderRadius: '4px', border: '1px solid #bfdbfe' }}>

@@ -57,6 +57,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Link href="/dashboard/customers" style={getLinkStyle('/dashboard/customers')}>👥 Müşteriler</Link>
           <Link href="/dashboard/reports" style={getLinkStyle('/dashboard/reports')}>📊 Raporlar</Link>
           <Link href="/dashboard/inventory" style={getLinkStyle('/dashboard/inventory')}>📦 Stok Yönetimi</Link>
+          <Link href="/dashboard/appointments" style={getLinkStyle('/dashboard/appointments')}>📅 Randevular</Link>
           
           {/* SADECE SUPER ADMIN'İN GÖRECEĞİ MENÜ */}
           {user.role === 'super_admin' && (

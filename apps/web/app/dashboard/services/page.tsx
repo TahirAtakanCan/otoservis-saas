@@ -7,9 +7,11 @@ import { createServiceRecord, getServiceRecordsByTenant, updateServiceStatus, ad
 import { getVehiclesByTenant } from '../../../lib/vehicle';
 import { getInventoryByTenant, Part } from '../../../lib/inventory';
 import { ServiceRecord, Vehicle } from '@repo/types';
+import { useRouter } from 'next/navigation'; // <-- Bunu importların arasına ekle
 
 export default function ServicesPage() {
   const { user } = useAuthStore();
+  const router = useRouter();
   const [records, setRecords] = useState<ServiceRecord[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [inventory, setInventory] = useState<Part[]>([]);
@@ -167,15 +169,25 @@ export default function ServicesPage() {
                           <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>Toplam Tutar: </span>
                           <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#10b981' }}>₺{record.totalCost?.toLocaleString() || 0}</span>
                         </div>
-                        
-                        {record.status !== 'tamamlandi' && (
+
+                        {/* YAZDIR BUTONU BURAYA EKLENECEK */}
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
                           <button 
-                            onClick={() => setActiveRecordId(activeRecordId === record.id ? null : record.id)}
-                            style={{ padding: '0.5rem 1rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.875rem' }}
+                              onClick={() => router.push(`/dashboard/invoice/${record.id}`)} // <-- window.open yerine router.push yaptık
+                              style={{ padding: '0.5rem 1rem', backgroundColor: '#4b5563', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.875rem' }}
                           >
-                            + Parça/İşçilik Ekle
+                            🖨️ Formu Yazdır
                           </button>
-                        )}
+                          
+                          {record.status !== 'tamamlandi' && (
+                            <button 
+                              onClick={() => setActiveRecordId(activeRecordId === record.id ? null : record.id)}
+                              style={{ padding: '0.5rem 1rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.875rem' }}
+                            >
+                              + Parça/İşçilik Ekle
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       {/* PARÇA EKLEME AÇILIR PANELİ */}

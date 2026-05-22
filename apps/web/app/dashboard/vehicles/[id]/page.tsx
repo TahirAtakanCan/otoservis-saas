@@ -10,7 +10,7 @@ import { getServiceRecordsByTenant} from '../../../../lib/service';
 import { Vehicle, Customer, ServiceRecord } from '@repo/types';
 
 export default function VehicleHistoryPage() {
-  const { user } = useAuthStore();
+  const { user, isLoading: authLoading } = useAuthStore(); // useAuthStore'dan gelen loading'i kullanın
   const router = useRouter();
   const params = useParams();
   const vehicleId = params.id as string;
@@ -21,6 +21,7 @@ export default function VehicleHistoryPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (authLoading) return;
     const fetchHistory = async () => {
       if (!user?.tenantId || !vehicleId) return;
       setIsLoading(true);
@@ -119,7 +120,7 @@ export default function VehicleHistoryPage() {
                 </div>
                 {/* PDF FATURA BUTONU */}
                 <button 
-                  onClick={() => window.open(`/dashboard/invoice/${service.id}`, '_blank')}
+                  onClick={() => router.push(`/dashboard/invoice/${service.id}`)}
                   style={{ padding: '0.5rem 1rem', backgroundColor: '#374151', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                 >
                   🖨️ PDF Dökümü
